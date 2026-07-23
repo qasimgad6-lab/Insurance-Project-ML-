@@ -1,5 +1,6 @@
 from pathlib import Path
 import pandas as pd
+import joblib
 import plotly.express as px
 import streamlit as st
 import warnings
@@ -27,32 +28,34 @@ custom_template = dict(
 )
 
 # =========================
-# Page Config
-# =========================
-st.set_page_config(page_title="Medical Insurance EDA", layout="wide")
-
-st.title("🏥 Medical Insurance EDA Dashboard")
-st.markdown("Interactive analysis of demographics and healthcare charges 🔥")
-
-
-# =========================
 # Data Loading & Auto-Cleaning
 # =========================
+from pathlib import Path
+
 @st.cache_data
 def load_data():
-    csv_path = (
-        Path(r"D:\Data science\Qasim Elasyed Gadelkareem Ali\Deployment") / "insurance_cleaned.csv"
-    )
+    # 1. Get the directory where MLpage.py actually lives
+    try:
+        BASE_DIR = Path(__file__).resolve().parent
+    except NameError:
+        BASE_DIR = Path.cwd()
 
+    # 2. Point to the CSV relative to the script directory
+    csv_path = BASE_DIR / "insurance_cleaned.csv"
+
+    # 3. Fallback to current working directory if not found in BASE_DIR
     if not csv_path.exists():
-        try:
-            BASE_DIR = Path(__file__).resolve().parent
-            csv_path = BASE_DIR / "insurance_cleaned.csv"
-        except NameError:
-            csv_path = Path.cwd() / "insurance_cleaned.csv"
+        csv_path = Path.cwd() / "insurance_cleaned.csv"
 
-    df = pd.read_csv(csv_path)
-    df.columns = df.columns.str.strip()
+    # 4. Load & Clean
+    try:
+        df = pd.read_csv(csv_path)
+        df.columns = df.columns.str.strip()
+        return df
+    except FileNotFoundError:
+        st.error(f"⚠️ Could not locate `insurance_cleaned.csv` at `{csv_path}`. "
+                 "Make sure the CSV file is pushed to your GitHub repository.")
+        st.stop()
 
     # 1. Reconstruct 'region' if it was one-hot encoded
     region_cols = [c for c in df.columns if c.startswith("region_")]
