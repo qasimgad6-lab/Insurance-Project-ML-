@@ -1,4 +1,4 @@
-import warnings
+mimport warnings
 from pathlib import Path
 
 import joblib
@@ -16,38 +16,50 @@ st.set_page_config(
     layout="centered",
 )
 
-# Explicit path to your Deployment folder
-DEPLOY_FOLDER = Path(r"D:\Data science\Qasim Elasyed Gadelkareem Ali\Deployment")
-
 # =========================
 # Artifact Loaders
 # =========================
 @st.cache_resource
 def load_ml_artifacts():
-    model_path = DEPLOY_FOLDER / "insurance_rf_model.pkl"
-    input_path = DEPLOY_FOLDER / "input.h5"
-    metadata_path = DEPLOY_FOLDER / "model_metadata.joblib"
+    # Detect directory where Deploy.py lives
+    current_dir = Path(__file__).resolve().parent
+    
+    # Check current folder (pages/) and parent folder (root)
+    search_dirs = [current_dir, current_dir.parent]
+    
+    model_path = None
+    input_path = None
+    metadata_path = None
 
-    # Fallback to local script folder if running from a different root
-    if not model_path.exists():
-        base_dir = Path(__file__).resolve().parent
-        model_path = base_dir / "insurance_rf_model.pkl"
-        input_path = base_dir / "input.h5"
-        metadata_path = base_dir / "model_metadata.joblib"
+    # Locate the files in either root or pages/
+    for folder in search_dirs:
+        if (folder / "insurance_rf_model.pkl").exists():
+            model_path = folder / "insurance_rf_model.pkl"
+            input_path = folder / "input.h5"
+            metadata_path = folder / "model_metadata.joblib"
+            break
 
-    model = joblib.load(model_path) if model_path.exists() else None
+    # If the model wasn't found in either directory
+    if not model_path or not model_path.exists():
+        st.error("⚠️ Could not locate `insurance_rf_model.pkl`. "
+                 "Please ensure your `.pkl` model file is committed to your GitHub repository.")
+        st.stop()
+
+    # Load Model
+    model = joblib.load(model_path)
 
     # Load input feature order either from input.h5 or metadata dict
     input_features = None
-    if input_path.exists():
+    if input_path and input_path.exists():
         input_features = joblib.load(input_path)
-    elif metadata_path.exists():
+    elif metadata_path and metadata_path.exists():
         metadata = joblib.load(metadata_path)
         input_features = metadata.get("features", None)
 
     return model, input_features
 
 
+# Load the artifacts
 model, input_features = load_ml_artifacts()
 
 # =========================================================
